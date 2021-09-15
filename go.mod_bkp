@@ -1,0 +1,3 @@
+module github.com/lmartinezsch/lifepolls-back
+
+go 1.16
