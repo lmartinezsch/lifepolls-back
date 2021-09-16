@@ -76,10 +76,10 @@ func JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		var user models.Auth
-		user.Read(tokenData["user"].(common.JSON))
+		var auth models.Auth
+		auth.Read(tokenData["auth"].(common.JSON))
 
-		c.Set("user", user)
+		c.Set("auth", auth)
 		c.Set("token_expire", tokenData["exp"])
 		c.Next()
 	}

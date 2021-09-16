@@ -33,7 +33,7 @@ func generateToken(data common.JSON) (string, error) {
 	date := time.Now().Add(time.Hour * 24 * 7)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user": data,
+		"auth": data,
 		"exp":  date.Unix(),
 	})
 
@@ -92,7 +92,7 @@ func register(c *gin.Context) {
 	c.SetCookie("token", token, 60*60*24*7, "/", "", false, true)
 
 	c.JSON(200, common.JSON{
-		"user":  auth.Serialize(),
+		"auth":  auth.Serialize(),
 		"token": token,
 	})
 }
@@ -111,38 +111,38 @@ func login(c *gin.Context) {
 	}
 
 	// check existancy
-	var user Auth
-	if err := db.Where("username = ?", body.Username).First(&user).Error; err != nil {
+	var auth Auth
+	if err := db.Where("username = ?", body.Username).First(&auth).Error; err != nil {
 		fmt.Println(err)
 		c.AbortWithStatus(404) // user not found
 		return
 	}
 
-	if !checkHash(body.Password, user.PasswordHash) {
+	if !checkHash(body.Password, auth.PasswordHash) {
 		c.AbortWithStatus(401)
 		return
 	}
 
-	serialized := user.Serialize()
+	serialized := auth.Serialize()
 	token, _ := generateToken(serialized)
 
 	c.SetCookie("token", token, 60*60*24*7, "/", "", false, true)
 
 	c.JSON(200, common.JSON{
-		"user":  user.Serialize(),
+		"auth":  auth.Serialize(),
 		"token": token,
 	})
 }
 
 // check API will renew token when token life is less than 3 days, otherwise, return null for token
 func check(c *gin.Context) {
-	userRaw, ok := c.Get("user")
+	authRaw, ok := c.Get("auth")
 	if !ok {
 		c.AbortWithStatus(401)
 		return
 	}
 
-	user := userRaw.(Auth)
+	auth := authRaw.(Auth)
 
 	tokenExpire := int64(c.MustGet("token_expire").(float64))
 	now := time.Now().Unix()
@@ -151,17 +151,17 @@ func check(c *gin.Context) {
 	fmt.Println(diff)
 	if diff < 60*60*24*3 {
 		// renew token
-		token, _ := generateToken(user.Serialize())
+		token, _ := generateToken(auth.Serialize())
 		c.SetCookie("token", token, 60*60*24*7, "/", "", false, true)
 		c.JSON(200, common.JSON{
 			"token": token,
-			"user":  user.Serialize(),
+			"auth":  auth.Serialize(),
 		})
 		return
 	}
 
 	c.JSON(200, common.JSON{
 		"token": nil,
-		"user":  user.Serialize(),
+		"auth":  auth.Serialize(),
 	})
 }

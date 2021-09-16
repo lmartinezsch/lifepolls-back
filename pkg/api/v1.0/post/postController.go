@@ -13,13 +13,17 @@ type Post = models.Post
 // User type alias
 type User = models.User
 
+// Auth type alias
+type Auth = models.Auth
+
 // JSON type alias
 type JSON = common.JSON
 
 func create(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 	type RequestBody struct {
-		Text string `json:"text" binding:"required"`
+		Text   string `json:"text" binding:"required"`
+		UserID int    `json:"user_id" binding:"required"`
 	}
 	var requestBody RequestBody
 
@@ -28,8 +32,14 @@ func create(c *gin.Context) {
 		return
 	}
 
-	//user := c.MustGet("user").(User)
-	post := Post{Text: requestBody.Text}
+	//auth := c.MustGet("auth").(Auth)
+
+	var user User
+	if err := db.Set("gorm:auto_preload", true).Where("id = ?", requestBody.UserID).First(&user).Error; err != nil {
+		c.AbortWithStatus(404)
+		return
+	}
+	post := Post{Text: requestBody.Text, User: user}
 	db.NewRecord(post)
 	db.Create(&post)
 	c.JSON(200, post.Serialize())
